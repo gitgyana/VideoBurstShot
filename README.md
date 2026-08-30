@@ -44,7 +44,7 @@ A Python utility that scans a directory of videos, extracts representative frame
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Features
 
 - Extracts evenly distributed frames from each video.
@@ -61,7 +61,7 @@ A Python utility that scans a directory of videos, extracts representative frame
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Example
 
 For a video, selecting a `5 × 3` collage produces 15 representative frames:
@@ -82,7 +82,7 @@ For a video, selecting a `5 × 3` collage produces 15 representative frames:
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Requirements
 
 - Python 3.8+
@@ -93,7 +93,7 @@ For a video, selecting a `5 × 3` collage produces 15 representative frames:
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Installation
 
 Install the required Python packages:
@@ -130,7 +130,7 @@ Then:
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Directory Structure
 
 By default, the script expects:
@@ -147,7 +147,7 @@ The `Collages` directory is automatically created if it does not exist.
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Usage
 
 Run the script:
@@ -167,7 +167,7 @@ Otherwise, enter custom paths when prompted.
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Collage Layouts
 
 The script provides three predefined layouts:
@@ -200,7 +200,7 @@ This produces a collage containing `8 × 4 = 32 frames`.
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Generated Files
 
 For a source video:
@@ -213,7 +213,7 @@ the generated collage is saved as:
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Metadata
 
 The collage header contains information about the source video and its audio streams.
@@ -260,7 +260,7 @@ Example:
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Timestamp Sampling
 
 The script samples frames between 30 seconds after the beginning and 30 seconds before the end of the video.
@@ -275,7 +275,7 @@ For example, a `5 × 3` collage extracts 15 frames.
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Frame Order
 
 Frames are intended to appear chronologically from left to right and then top to bottom.
@@ -292,7 +292,7 @@ The timestamp displayed on each frame makes it easy to verify the chronological 
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Supported Video Formats
 
 The script relies on OpenCV and MediaInfo. Supported formats therefore depend on the codecs available in your OpenCV/FFmpeg and MediaInfo installations.
@@ -309,7 +309,7 @@ Common formats include:
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Error Handling
 
 If a video cannot be processed, the script reports the error and continues with the next video.
@@ -322,7 +322,7 @@ This prevents a single problematic video from stopping the entire batch.
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Notes
 
 ### Large Videos
@@ -347,7 +347,7 @@ Videos with unusual or variable frame-rate characteristics may not always produc
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Customization
 
 ### Sampling Margin
@@ -384,7 +384,7 @@ The default format is:
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## Troubleshooting
 
 ### `cv2` ModuleNotFoundError
@@ -417,7 +417,7 @@ If necessary, ensure the extracted frame/timestamp pairs are sorted chronologica
 
 ---
 
-###[(ToC)](#table-of-contents)
+[(ToC)](#table-of-contents)
 ## License
 
 This project is provided as-is for personal or internal use.
