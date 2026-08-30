@@ -79,13 +79,13 @@ def extract_info(video_path, num_frames):
     return size, frames, timestamps, video_infos, audio_streams
 
 
-def add_timestamp(frame, timestamp, duration):
+def add_timestamp(frame, timestamp):
     time_str = str(datetime.utcfromtimestamp(timestamp / 1000).strftime("%H:%M:%S"))
     font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 1.5
-    font_thickness = 3
+    font_scale = min(frame.shape[0], frame.shape[1]) / 500 
+    font_thickness = int(min(frame.shape[0], frame.shape[1]) / 200) 
     text_size = cv2.getTextSize(time_str, font, font_scale, font_thickness)[0]
-    text_x = frame.shape[1] - text_size[0] - 10
+    text_x = 10  # Adjusted to position at the left edge
     text_y = frame.shape[0] - 10
     
     bg_color = (20, 20, 20)
@@ -112,7 +112,7 @@ def create_collage(frames, timestamps, rows, cols, media_info):
             if frame_idx < len(frames):
                 frame = frames[frame_idx]
                 timestamp = timestamps[frame_idx]
-                add_timestamp(frame, timestamp, media_info['video_infos']['duration'])
+                add_timestamp(frame, timestamp)
                 collage[i * frame_height: (i + 1) * frame_height, j * frame_width: (j + 1) * frame_width] = frame
 
     # Add video information within the header
@@ -128,7 +128,12 @@ def create_collage(frames, timestamps, rows, cols, media_info):
     ]
     
     for audio_stream in media_info['audio_streams']:
-        header_text.append(f" - {audio_stream['name']}: Codec: {audio_stream['codec']}, Bitrate: {audio_stream['bitrate']} bps, Channels: {audio_stream['channels']}, Sample Rate: {audio_stream['sample_rate']} Hz")
+        header_text.append(
+            f" - {audio_stream['name']}: Codec: {audio_stream['codec']}, "
+            f"Bitrate: {audio_stream['bitrate']} bps, "
+            f"Channels: {audio_stream['channels']}, "
+            f"Sample Rate: {audio_stream['sample_rate']} Hz"
+        )
         header_text.append("")
     
     header_text.extend([
@@ -136,18 +141,25 @@ def create_collage(frames, timestamps, rows, cols, media_info):
         ''
     ])
     video_info = media_info['video_infos']
-    header_text.append(f" - Resolution: {video_info['resolution']}, Aspect Ratio: {video_info['aspect_ratio']}, Refresh Rate: {video_info['fps']:.0f}fps, Duration: {video_info['duration']}")
+    header_text.append(
+        f" - Resolution: {video_info['resolution']}, "
+        f"Aspect Ratio: {video_info['aspect_ratio']}, "
+        f"Refresh Rate: {video_info['fps']:.0f}fps, "
+        f"Duration: {video_info['duration']}"
+    )
     header_text.append("")
 
     # Add black header
     font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = [2.2, 2.2, 2.2]
-    font_thickness = [3, 3, 3]
+    font_scale_value = min(frame.shape[0], frame.shape[1]) / 500
+    font_scale = [font_scale_value, font_scale_value, font_scale_value]
+    font_thickness_value = int(min(frame.shape[0], frame.shape[1]) / 200) 
+    font_thickness = [font_thickness_value, font_thickness_value, font_thickness_value]
     header_height = 0
     line_number = 0
     for line in header_text:
-        font_scale.append(2.2)
-        font_thickness.append(3)
+        font_scale.append(font_scale_value)
+        font_thickness.append(font_thickness_value)
         text_size = cv2.getTextSize(line, font, font_scale[line_number], font_thickness[line_number])[0]
         header_height += text_size[1] + 5  # Add height for the current line
         line_number = line_number + 1
