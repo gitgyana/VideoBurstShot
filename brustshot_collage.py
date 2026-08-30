@@ -1,14 +1,13 @@
 import os
 import cv2
-import moviepy.editor as mp
-import numpy as np
-from tqdm import tqdm
-from datetime import datetime
 import math
-
+import numpy as np
+from datetime import datetime, timedelta
+from pymediainfo import MediaInfo
 
 def format_size(size_in_bytes):
     # Define the suffixes for each size type
+    size_bytes = size_in_bytes
     suffixes = ['Byte', 'KB', 'MB', 'GB', 'TB']
 
     # Determine the appropriate size type
@@ -18,23 +17,39 @@ def format_size(size_in_bytes):
         size_type += 1
 
     # Format the size with the appropriate suffix
-    formatted_size = "{:.2f} {}".format(size_in_bytes, suffixes[size_type])
+    formatted_size = "{} Bytes ({:.2f} {})".format(size_bytes, size_in_bytes, suffixes[size_type])
 
     return formatted_size
 
 
 def extract_info(video_path, num_frames):
+    # Get video information using MediaInfo
+    media_info = MediaInfo.parse(video_path)
+    audio_streams = []
+    stream_counter = 1
+    for track in media_info.tracks:
+        if track.track_type == 'Audio':
+            audio_name = track.title if track.title else f"Audio Stream {stream_counter}"
+            audio_streams.append({
+                'name': audio_name,
+                'codec': track.codec_id,
+                'bitrate': track.bit_rate,
+                'channels': track.channel_s,
+                'sample_rate': track.sampling_rate
+            })
+            stream_counter += 1
+
     vidcap = cv2.VideoCapture(video_path)
     size_in_bytes = float(os.path.getsize(video_path))
     size = format_size(size_in_bytes)
-    resolution = mp.VideoFileClip(video_path).size
-    total_frames = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps = vidcap.get(cv2.CAP_PROP_FPS)  # Frames per second
-    duration = total_frames / fps  # Video duration in seconds
+    
+    # Video properties
     frame_width = vidcap.get(cv2.CAP_PROP_FRAME_WIDTH)
     frame_height = vidcap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    gcd = math.gcd(int(frame_width), int(frame_height))
-    aspect_ratio = f"{int(frame_width / gcd)}:{int(frame_height / gcd)}"
+    resolution = f"{int(frame_width)} x {int(frame_height)}"
+    total_frames = int(vidcap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = vidcap.get(cv2.CAP_PROP_FPS)
+    duration = str(datetime.utcfromtimestamp(total_frames / fps).strftime('%H:%M:%S'))
     
     frame_indices = np.linspace(fps * 30, total_frames - fps * 30, num_frames, dtype=int)  # Adjusting timestamps
 
@@ -49,9 +64,19 @@ def extract_info(video_path, num_frames):
         frames.append(image)
         timestamp = int(vidcap.get(cv2.CAP_PROP_POS_MSEC))
         timestamps.append(timestamp)
-
+    
     vidcap.release()
-    return size, resolution, frames, timestamps, duration, aspect_ratio, fps
+    gcd = math.gcd(int(frame_width), int(frame_height))
+    aspect_ratio = f"{int(frame_width / gcd)}:{int(frame_height / gcd)}"
+    
+    video_infos = {
+        'resolution': resolution,
+        'aspect_ratio': aspect_ratio,
+        'fps': fps,
+        'duration': duration
+    }
+    
+    return size, frames, timestamps, video_infos, audio_streams
 
 
 def add_timestamp(frame, timestamp, duration):
@@ -72,7 +97,7 @@ def add_timestamp(frame, timestamp, duration):
     cv2.putText(frame, time_str, (text_x, text_y), font, font_scale, (255, 255, 255), font_thickness)
     
 
-def create_collage(frames, timestamps, rows, cols, video_info):
+def create_collage(frames, timestamps, rows, cols, media_info):
     frame_height, frame_width, _ = frames[0].shape
     collage_height = frame_height * rows
     collage_width = frame_width * cols
@@ -87,31 +112,37 @@ def create_collage(frames, timestamps, rows, cols, video_info):
             if frame_idx < len(frames):
                 frame = frames[frame_idx]
                 timestamp = timestamps[frame_idx]
-                add_timestamp(frame, timestamp, video_info['duration'])
+                add_timestamp(frame, timestamp, media_info['video_infos']['duration'])
                 collage[i * frame_height: (i + 1) * frame_height, j * frame_width: (j + 1) * frame_width] = frame
 
     # Add video information within the header
     header_text = [
         '',
         '',
-        f" File: {video_info['filename']}",
+        f" File: {media_info['filename']}",
         '',
-        f"   Size: {video_info['size']}",
+        f" Size: {media_info['size']}",
         '',
-        f"   Duration: {datetime.utcfromtimestamp(video_info['duration']).strftime('%H:%M:%S')}",
-        '',
-        f"   Resolution: {video_info['resolution'][0]} x {video_info['resolution'][1]}",
-        '',
-        f"   FPS: {video_info['fps']:.1f}",
-        '',
-        f"   Aspect Ratio: {video_info['aspect_ratio']}",
+        " Audio Info:",
         ''
     ]
+    
+    for audio_stream in media_info['audio_streams']:
+        header_text.append(f" - {audio_stream['name']}: Codec: {audio_stream['codec']}, Bitrate: {audio_stream['bitrate']} bps, Channels: {audio_stream['channels']}, Sample Rate: {audio_stream['sample_rate']} Hz")
+        header_text.append("")
+    
+    header_text.extend([
+        " Video Info:",
+        ''
+    ])
+    video_info = media_info['video_infos']
+    header_text.append(f" - Resolution: {video_info['resolution']}, Aspect Ratio: {video_info['aspect_ratio']}, Refresh Rate: {video_info['fps']:.0f}fps, Duration: {video_info['duration']}")
+    header_text.append("")
 
     # Add black header
     font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = [2.2, 2.2, 3.2]
-    font_thickness = [3, 3, 5]
+    font_scale = [2.2, 2.2, 2.2]
+    font_thickness = [3, 3, 3]
     header_height = 0
     line_number = 0
     for line in header_text:
@@ -152,17 +183,15 @@ def process_videos(input_dir, output_dir, rows, cols):
     for video_file in video_files:
         video_path = os.path.join(input_dir, video_file)
         try:                        
-            size, resolution, frames, timestamps, duration, aspect_ratio, fps = extract_info(video_path, rows * cols)
-            video_info = {
+            size, frames, timestamps, video_infos, audio_streams = extract_info(video_path, rows * cols)
+            media_info = {
                 'filename': video_file,
                 'size': size,
-                'resolution': resolution,
-                'duration': duration,
-                'aspect_ratio': aspect_ratio,
-                'fps': fps,
+                'video_infos': video_infos,
+                'audio_streams': audio_streams
             }
             
-            collage = create_collage(frames, timestamps, rows, cols, video_info)
+            collage = create_collage(frames, timestamps, rows, cols, media_info)
             save_collage(collage, video_path, output_dir)
         except Exception as e:
             print(f"Error processing {video_file}: {e}")
@@ -190,10 +219,10 @@ def main():
         # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
     
-    choice = input('13 rows and 3 columns, right?\n'
+    choice = input('10 rows and 3 columns, right?\n'
                    ' [Y/N]: ')
     if choice.lower() == 'y':
-        rows = 13
+        rows = 10
         cols = 3
     else:
         rows = int(input("Enter the number of rows for the collage: "))
