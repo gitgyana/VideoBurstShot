@@ -27,6 +27,8 @@ def extract_info(video_path, num_frames):
     media_info = MediaInfo.parse(video_path)
     audio_streams = []
     stream_counter = 1
+    video_format = None
+    
     for track in media_info.tracks:
         if track.track_type == 'Audio':
             audio_name = track.title if track.title else f"Audio Stream {stream_counter}"
@@ -38,6 +40,8 @@ def extract_info(video_path, num_frames):
                 'sample_rate': track.sampling_rate
             })
             stream_counter += 1
+        elif track.track_type == 'Video':
+            video_format = f"{track.format}"
 
     vidcap = cv2.VideoCapture(video_path)
     size_in_bytes = float(os.path.getsize(video_path))
@@ -66,6 +70,12 @@ def extract_info(video_path, num_frames):
         timestamps.append(timestamp)
     
     vidcap.release()
+
+    # Ensure frames are always in chronological order
+    frame_data = sorted(zip(timestamps, frames), key=lambda x: x[0])
+    timestamps = [timestamp for timestamp, frame in frame_data]
+    frames = [frame for timestamp, frame in frame_data]
+
     gcd = math.gcd(int(frame_width), int(frame_height))
     aspect_ratio = f"{int(frame_width / gcd)}:{int(frame_height / gcd)}"
     
@@ -73,7 +83,8 @@ def extract_info(video_path, num_frames):
         'resolution': resolution,
         'aspect_ratio': aspect_ratio,
         'fps': fps,
-        'duration': duration
+        'duration': duration,
+        'codec': video_format
     }
     
     return size, frames, timestamps, video_infos, audio_streams
@@ -119,6 +130,7 @@ def create_collage(frames, timestamps, rows, cols, media_info):
     header_text = [
         '',
         '',
+        '',
         f" File: {media_info['filename']}",
         '',
         f" Size: {media_info['size']}",
@@ -142,7 +154,8 @@ def create_collage(frames, timestamps, rows, cols, media_info):
     ])
     video_info = media_info['video_infos']
     header_text.append(
-        f" - Resolution: {video_info['resolution']}, "
+        f" - Codec: {video_info['codec']}, "
+        f"Resolution: {video_info['resolution']}, "
         f"Aspect Ratio: {video_info['aspect_ratio']}, "
         f"Refresh Rate: {video_info['fps']:.0f}fps, "
         f"Duration: {video_info['duration']}"
@@ -184,7 +197,7 @@ def create_collage(frames, timestamps, rows, cols, media_info):
 
 def save_collage(collage, video_path, output_dir):
     filename = os.path.splitext(os.path.basename(video_path))[0]
-    output_path = os.path.join(output_dir, filename + "_collage.jpg")
+    output_path = os.path.join(output_dir, filename + " [Timeline].jpg")
     cv2.imwrite(output_path, collage)
     print(f"Collage saved for {filename}.")
 
@@ -210,8 +223,9 @@ def process_videos(input_dir, output_dir, rows, cols):
 
 
 def main():
-    input_dir = None
-    output_dir = None
+    input_dir = os.path.join(os.getcwd(), 'Videos')
+    output_dir = os.path.join(os.getcwd(), 'Collages')
+    
     rows = None
     cols = None
     
@@ -220,22 +234,29 @@ def main():
                    'Collages: Collages\n'
                    ' [Y/N]: ')
     if choice.lower() == 'y':
-        input_dir = os.path.join(os.getcwd(), 'Videos')
-        output_dir = os.path.join(os.getcwd(), 'Collages')
-        # Create directories if they don't exist
-        os.makedirs(input_dir, exist_ok=True)
-        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)    
     else:
         input_dir = input("Enter the directory containing all the videos: ")
         output_dir = input("Enter the directory where to save the images: ")
-        # Create output directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
     
-    choice = input('10 rows and 3 columns, right?\n'
-                   ' [Y/N]: ')
-    if choice.lower() == 'y':
+
+    choice = input('\n'
+                   'Option 1:  5 rows and 3 columns \n'
+                   'Option 2: 10 rows and 3 columns \n'
+                   'Option 3: 13 rows and 3 columns \n'
+                   'Default : Custom \n\n'
+                   ' > ')
+
+    if choice == '1':
+        rows = 5
+        cols = 3
+    elif choice == '2':
         rows = 10
         cols = 3
+    elif choice == '3':
+        rows = 13
+        cols = 3 
     else:
         rows = int(input("Enter the number of rows for the collage: "))
         cols = int(input("Enter the number of columns for the collage: "))
